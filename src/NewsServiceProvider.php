@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Contracts\Routing\Registrar as Router;
 use NickKlein\News\Commands\DestroyOldNewsLinksCommand;
 use NickKlein\News\Commands\GenerateUserNews;
+use NickKlein\News\Commands\RunSeederCommand;
 
 class NewsServiceProvider extends ServiceProvider
 {
@@ -38,6 +39,7 @@ class NewsServiceProvider extends ServiceProvider
         $this->commands([
             DestroyOldNewsLinksCommand::class,
             GenerateUserNews::class,
+            RunSeederCommand::class
         ]);
     }
 }
