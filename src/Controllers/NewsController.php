@@ -3,16 +3,16 @@
 namespace NickKlein\News\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\NewsSourceRequest;
-use App\Http\Requests\TagRequest;
-use App\Http\Resources\TagsResource;
-use App\Repositories\TagsRepository;
+use NickKlein\News\Requests\NewsSourceRequest;
+use NickKlein\News\Requests\TagRequest;
+use NickKlein\News\Resources\TagsResource;
+use NickKlein\News\Repositories\TagsRepository;
 use NickKlein\News\Services\NewsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use App\Services\TagsService;
+use NickKlein\News\Services\TagsService;
 
 class NewsController extends Controller
 {
@@ -21,7 +21,7 @@ class NewsController extends Controller
      */
     public function index(NewsService $service)
     {
-        return Inertia::render('Packages/News/Index', [
+        return Inertia::render('News/Index', [
             'links' => $service->list(Auth::user()->id),
         ]);
     }
@@ -33,7 +33,7 @@ class NewsController extends Controller
      */
     public function edit(NewsService $service)
     {
-        return Inertia::render('Packages/News/Edit', [
+        return Inertia::render('News/Edit', [
             'sources' => $service->listSources(Auth::user()->id),
             'sourceUpdateUrl' => route('news.edit.update-source'),
             'tags' => TagsResource::collection($service->listTags(Auth::user()->id)),
@@ -44,7 +44,7 @@ class NewsController extends Controller
 
     public function showFavourites(NewsService $service)
     {
-        return Inertia::render('Packages/News/Favourites', [
+        return Inertia::render('News/Favourites', [
             'links' => $service->listFavourite(Auth::user()->id),
         ]);
     }

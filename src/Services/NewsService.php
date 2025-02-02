@@ -6,7 +6,7 @@ use NickKlein\News\Repositories\NewsRepository;
 use NickKlein\News\Models\SourcesFavourites;
 use NickKlein\News\Models\UserSources;
 use NickKlein\News\Models\Sources;
-use App\Repositories\TagsRepository;
+use NickKlein\Tags\Repositories\TagsRepository;
 use Carbon\Carbon;
 
 class NewsService
