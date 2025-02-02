@@ -4,6 +4,7 @@ namespace NickKlein\News\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use NickKlein\Tags\Models\Tags;
 
 class NewsSummary extends Model
 {
@@ -14,6 +15,6 @@ class NewsSummary extends Model
 
     public function tags()
     {
-        return $this->hasOne('\App\Models\Tags', 'tag_id', 'tag_id');
+        return $this->hasOne(Tags::class, 'tag_id', 'tag_id');
     }
 }

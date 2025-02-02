@@ -45,7 +45,7 @@ class Crawler:
 		    with connection.cursor() as cursor:
 		    	self.collectLinks(cursor)
 		    	connection.commit()
-		    	
+
 		    	self.crawlThroughLinks(cursor)
 		    	connection.commit()
 		finally:
@@ -68,18 +68,18 @@ class Crawler:
 				link_url = anchor.get('href', '/')
 
 				# Remove links where the label is less than 30 characters (Articles usally have longer labels), exclude things like <img, <source, #comments, /users/
-				if len(link_label) > 30 and '<img' not in link_label and '<source' not in link_label  and "#comments" not in link_url and "/users/" not in link_url and "javascript:void(0)" not in link_url and link_url != item['source_main_url']: 
+				if len(link_label) > 30 and '<img' not in link_label and '<source' not in link_label  and "#comments" not in link_url and "/users/" not in link_url and "javascript:void(0)" not in link_url and link_url != item['source_main_url']:
 					#Prepare list item
 					links.append([item['source_id'], self.convertToAbsoluteURL(item['source_domain'],anchor.get('href', '/')), sourceTitle])
 					insert_sql =  "INSERT IGNORE INTO source_links (source_id, source_link, source_title, created_at, updated_at, active) VALUES (%s, %s, %s, now(), now(), 0)"
-					
+
 			cursor.executemany(insert_sql, links)
 
 
 	def crawlThroughLinks(self, cursor):
 		print("crawlThrougHLinks")
 		#crawl through links and collect website articles
-		
+
 		sql = "SELECT source_links.source_link_id, source_links.source_link, sources.source_id, sources.language FROM source_links INNER JOIN sources ON source_links.source_id=sources.source_id INNER JOIN user_sources ON user_sources.source_id=sources.source_id WHERE source_links.active = 0 AND (source_links.source_id = 14 AND source_links.source_link LIKE '%www.sueddeutsche.de%' OR source_links.source_id != 14) ORDER BY RAND() LIMIT 100";
 
 		cursor.execute(sql)

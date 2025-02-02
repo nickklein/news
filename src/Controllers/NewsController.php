@@ -4,15 +4,15 @@ namespace NickKlein\News\Controllers;
 
 use App\Http\Controllers\Controller;
 use NickKlein\News\Requests\NewsSourceRequest;
-use NickKlein\News\Requests\TagRequest;
-use NickKlein\News\Resources\TagsResource;
-use NickKlein\News\Repositories\TagsRepository;
+use NickKlein\Tags\Requests\TagRequest;
+use NickKlein\Tags\Resources\TagsResource;
+use NickKlein\Tags\Services\TagsService;
+use NickKlein\Tags\Repositories\TagsRepository;
 use NickKlein\News\Services\NewsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use NickKlein\News\Services\TagsService;
 
 class NewsController extends Controller
 {
