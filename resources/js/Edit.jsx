@@ -2,7 +2,7 @@ import React from 'react'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, usePage } from '@inertiajs/react';
 import NewsSources from './Partials/NewsSources';
-import Tags from '../../Partials/Tags';
+import Tags from '../Partials/Tags';
 
 function Edit(props) {
     return (

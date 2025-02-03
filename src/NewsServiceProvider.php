@@ -25,13 +25,9 @@ class NewsServiceProvider extends ServiceProvider
         // Publish 
         //
         if ($this->app->runningInConsole()) {
-            $this->publishes([
-                __DIR__ . '/../resources/assets/' => resource_path('js/Pages/Packages/News'),
-            ], 'assets');
-
             // Pulish python cron folder
             $this->publishes([
-                __DIR__ . '/../resources/cron' => base_path('cron'),
+                __DIR__ . '/../spider-robot' => base_path('./'),
             ], 'assets');
         }
 
