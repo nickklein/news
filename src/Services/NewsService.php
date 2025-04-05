@@ -2,11 +2,11 @@
 
 namespace NickKlein\News\Services;
 
-use App\Repositories\NewsRepository;
-use App\Models\SourcesFavourites;
-use App\Models\UserSources;
-use App\Models\Sources;
-use App\Repositories\TagsRepository;
+use NickKlein\News\Repositories\NewsRepository;
+use NickKlein\News\Models\SourcesFavourites;
+use NickKlein\News\Models\UserSources;
+use NickKlein\News\Models\Sources;
+use NickKlein\Tags\Repositories\TagsRepository;
 use Carbon\Carbon;
 
 class NewsService
