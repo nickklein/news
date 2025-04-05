@@ -6,6 +6,8 @@ use NickKlein\News\Seeders\SourcesTableSeeder;
 use NickKlein\News\Seeders\UserSourcesTableSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use NickKlein\News\Seeders\NewsSummaryTableSeeder;
+use NickKlein\News\Seeders\SourceLinksTableSeeder;
 
 class RunSeederCommand extends Command
 {
@@ -45,5 +47,11 @@ class RunSeederCommand extends Command
 
         Artisan::call('db:seed', ['--class' => SourcesTableSeeder::class]);
         $this->info('SourcesTableSeeder executed successfully.');
+
+        Artisan::call('db:seed', ['--class' => SourceLinksTableSeeder::class]);
+        $this->info('SourceLinksTableSeeder executed successfully.');
+
+        Artisan::call('db:seed', ['--class' => NewsSummaryTableSeeder::class]);
+        $this->info('NewsSummaryTableSeeder executed successfully.');
     }
 }

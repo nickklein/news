@@ -2,11 +2,11 @@
 
 namespace NickKlein\News\Services;
 
-use NickKlein\News\Repositories\NewsRepository;
-use NickKlein\News\Models\SourcesFavourites;
-use NickKlein\News\Models\UserSources;
-use NickKlein\News\Models\Sources;
-use NickKlein\Tags\Repositories\TagsRepository;
+use App\Repositories\NewsRepository;
+use App\Models\SourcesFavourites;
+use App\Models\UserSources;
+use App\Models\Sources;
+use App\Repositories\TagsRepository;
 use Carbon\Carbon;
 
 class NewsService
@@ -27,9 +27,9 @@ class NewsService
      *
      * @return collection
      */
-    public function list(int $userId): object
+    public function list(int $userId, int $paginate = 50): object
     {
-        $list = $this->newsRepository->list($userId, self::PAGINATE_LIMIT);
+        $list = $this->newsRepository->list($userId, $paginate);
         $list->map(function ($item) use ($userId) {
             $item->source_date = Carbon::parse($item->source_date)->diffForHumans();
             $item->favorited = $this->newsRepository->favoriteExist($item->source_link_id, $userId) ? 1 : 0;
@@ -45,9 +45,9 @@ class NewsService
         return $list;
     }
 
-    public function listFavourite(int $userId)
+    public function listFavourite(int $userId, int $paginate = 50)
     {
-        $list = $this->newsRepository->listFavourite($userId, self::PAGINATE_LIMIT);
+        $list = $this->newsRepository->listFavourite($userId, $paginate);
         $list->map(function ($item) use ($userId) {
             $item->source_date = Carbon::parse($item->source_date)->diffForHumans();
             $item->favorited = $this->newsRepository->favoriteExist($item->source_link_id, $userId) ? 1 : 0;
