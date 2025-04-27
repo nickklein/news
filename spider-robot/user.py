@@ -8,6 +8,8 @@ if (False):
 	path = '/var/www/vhosts/nickklein.ca/subdomains/life.nickklein.ca/.env'
 else:
 	path = '../.env'
+
+path = '/app/.env'
 	
 load_dotenv(path)
 

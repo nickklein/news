@@ -17,7 +17,9 @@ from dotenv import load_dotenv
 if (False):
 	path = '/var/www/vhosts/nickklein.ca/subdomains/life.nickklein.ca/.env'
 else:
-	path = '../.env'
+	path = '/home/ada/Sites/lifeautomation/core/.env'
+
+path = '/app/.env'
 
 load_dotenv(path)
 
