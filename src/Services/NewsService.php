@@ -33,7 +33,7 @@ class NewsService
         $list->map(function ($item) use ($userId) {
             $item->source_date = Carbon::parse($item->source_date)->diffForHumans();
             $item->favorited = $this->newsRepository->favoriteExist($item->source_link_id, $userId) ? 1 : 0;
-            $item->source_link = $item->web_archive ? 'https://web.archive.org/web/*/' . $item->source_link : $item->source_link;
+            $item->source_link = $item->web_archive ? 'https://www.removepaywall.com/search?url=' . $item->source_link : $item->source_link;
             $item->favorited_label = 'Add to Favorites';
             if ($item->favorited) {
                 $item->favorited_label = 'Remove from Favorites';
