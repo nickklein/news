@@ -38,7 +38,6 @@ class User:
 
 		try:
 		    with connection.cursor() as cursor:
-    			self.clearRank(cursor)
 		    	self.fetchUserTags(cursor)
 		    	connection.commit()
 		finally:
@@ -69,6 +68,8 @@ class User:
 			for article in articles:
 				links.append([article['source_link_id'], tag['id'], tag['tag_id'], article['rank']])
 
+
+    	self.clearRank(cursor)
 		cursor.executemany(summary_sql, links)
  
 	def processRanking(self, cursor, word, srcIds):
