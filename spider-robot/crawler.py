@@ -95,16 +95,16 @@ class Crawler:
 				article.download()
 				article.parse()
 				if article.text:
-					update = 'UPDATE source_links SET source_title = %s, source_date = %s, source_raw = %s, active = %s WHERE source_link_id = %s'
+					update = 'UPDATE source_links SET source_title = %s, source_date = %s, source_raw = %s, active = %s, updated_at=now() WHERE source_link_id = %s'
 					cursor.execute(update, (article.title, article.publish_date, article.text, 1, item['source_link_id']))
 				else:
 					# Can't find the article on the page. Deactivate the link so it's not used anymore
-					update = 'UPDATE source_links SET active = -1 WHERE source_link_id = %s'
+					update = 'UPDATE source_links SET active = -1, updated_at=now() WHERE source_link_id = %s'
 					cursor.execute(update, (item['source_link_id']))
 			except Exception as e:
 				print(f"Failed to download. Reason: {e}")
 				# Can't find the article on the page. Deactivate the link so it's not used anymore
-				update = 'UPDATE source_links SET active = -1 WHERE source_link_id = %s'
+				update = 'UPDATE source_links SET active = -1, updated_at=now() WHERE source_link_id = %s'
 				cursor.execute(update, (item['source_link_id']))
 
 			time.sleep(1)  # Throttle by sleeping for 2 seconds between requests
@@ -120,8 +120,6 @@ class Crawler:
 
 	def convertToAbsoluteURL(self, source_domain, link):
 		# Some websites use relative URLs not absolute URLS
-
-
 		if source_domain in link and 'https' not in link and 'http' not in link:
 			return 'http:' + link
 

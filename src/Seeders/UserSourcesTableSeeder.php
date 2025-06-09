@@ -15,13 +15,22 @@ class UserSourcesTableSeeder extends Seeder
      */
     public function run()
     {
-        $insert = array();
-        for ($i = 1; $i <= 7; $i++) {
-            $insert[] = array(
-                'user_id' => 1,
-                'source_id' => $i
-            );
-        }
-        DB::table('user_sources')->insert($insert);
+        DB::table('user_sources')->insert([
+            ['user_sources_id' => 2, 'user_id' => 1, 'source_id' => 2],
+            ['user_sources_id' => 8, 'user_id' => 1, 'source_id' => 8],
+            ['user_sources_id' => 108, 'user_id' => 1, 'source_id' => 1],
+            ['user_sources_id' => 109, 'user_id' => 1, 'source_id' => 3],
+            ['user_sources_id' => 110, 'user_id' => 1, 'source_id' => 5],
+            ['user_sources_id' => 111, 'user_id' => 1, 'source_id' => 12],
+            ['user_sources_id' => 112, 'user_id' => 1, 'source_id' => 11],
+            ['user_sources_id' => 115, 'user_id' => 1, 'source_id' => 16],
+            ['user_sources_id' => 116, 'user_id' => 1, 'source_id' => 18],
+            ['user_sources_id' => 120, 'user_id' => 1, 'source_id' => 24],
+            ['user_sources_id' => 121, 'user_id' => 1, 'source_id' => 14],
+            ['user_sources_id' => 122, 'user_id' => 1, 'source_id' => 21],
+            ['user_sources_id' => 123, 'user_id' => 1, 'source_id' => 22],
+            ['user_sources_id' => 126, 'user_id' => 1, 'source_id' => 6],
+            ['user_sources_id' => 127, 'user_id' => 1, 'source_id' => 4],
+        ]);
     }
 }
