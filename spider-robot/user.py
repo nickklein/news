@@ -69,7 +69,7 @@ class User:
 				links.append([article['source_link_id'], tag['id'], tag['tag_id'], article['rank']])
 
 
-    	self.clearRank(cursor)
+		self.clearRank(cursor)
 		cursor.executemany(summary_sql, links)
  
 	def processRanking(self, cursor, word, srcIds):
