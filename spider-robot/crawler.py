@@ -5,6 +5,7 @@ from newspaper import Article
 import requests
 import os
 import time
+import random
 import arrow
 from datetime import datetime
 import re
@@ -14,7 +15,7 @@ from dotenv import load_dotenv
 
 #load env file
 
-if (False):
+if (True):
 	path = '/var/www/vhosts/nickklein.ca/subdomains/life.nickklein.ca/.env'
 else:
 	path = '/home/ada/Sites/lifeautomation/core/.env'
@@ -54,8 +55,8 @@ class Crawler:
 			connection.close()
 
 	def collectLinks(self, cursor):
-		# Fetch Sources from DB
-		sql = 'SELECT source_id, source_domain, source_main_url FROM sources';
+		# Fetch Sources from DB that are linked to users
+		sql = 'SELECT DISTINCT sources.source_id, sources.source_domain, sources.source_main_url FROM sources INNER JOIN user_sources ON user_sources.source_id=sources.source_id';
 		cursor.execute(sql)
 		items = cursor.fetchall()
 		for item in items:
@@ -107,7 +108,7 @@ class Crawler:
 				update = 'UPDATE source_links SET active = -1, updated_at=now() WHERE source_link_id = %s'
 				cursor.execute(update, (item['source_link_id']))
 
-			time.sleep(1)  # Throttle by sleeping for 2 seconds between requests
+			time.sleep(random.uniform(1, 5))  # Throttle by sleeping 1-5 seconds between requests
 
 	def fetchAndParseWebsite(self, link_url):
 		try:
