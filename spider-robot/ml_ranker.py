@@ -7,6 +7,9 @@ from sentence_transformers import SentenceTransformer, util
 path = '/app/.env'
 load_dotenv(path)
 
+# Minimum similarity to consider a tag as "present" in an article
+SIMILARITY_THRESHOLD = 0.35
+
 class MLRanker:
 
     MYSQL_HOST = os.environ.get("DB_HOST")
@@ -43,7 +46,7 @@ class MLRanker:
 
         # Get all users with their tags
         sql = """
-            SELECT users.id, tags.tag_id, tags.tag_name FROM users
+            SELECT users.id as user_id, tags.tag_id, tags.tag_name FROM users
             LEFT JOIN user_tags ON user_tags.user_id=users.id
             INNER JOIN tags ON user_tags.tag_id=tags.tag_id
             ORDER BY users.id ASC
@@ -53,11 +56,14 @@ class MLRanker:
 
         # Group tags by user
         user_tags_map = {}
-        for tag in userTags:
-            user_id = tag['id']
+        for row in userTags:
+            user_id = row['user_id']
             if user_id not in user_tags_map:
                 user_tags_map[user_id] = []
-            user_tags_map[user_id].append(tag)
+            user_tags_map[user_id].append({
+                'tag_id': row['tag_id'],
+                'tag_name': row['tag_name']
+            })
 
         for user_id, tags in user_tags_map.items():
             # Get user's source IDs
@@ -70,22 +76,55 @@ class MLRanker:
             if not articles:
                 continue
 
-            # Combine all user tags into one interest profile
-            tag_names = [t['tag_name'] for t in tags]
-            interest_text = ' '.join(tag_names)
+            # Pre-encode all tag names
+            tag_embeddings = {}
+            for tag in tags:
+                tag_embeddings[tag['tag_id']] = {
+                    'name': tag['tag_name'],
+                    'embedding': self.model.encode(tag['tag_name'], convert_to_tensor=True)
+                }
 
-            # Rank articles using ML
-            ranked_articles = self.rankArticles(interest_text, articles)
+            # Process each article
+            for article in articles:
+                title = article['source_title'] or ''
+                raw = article['source_raw'] or ''
+                article_text = f"{title} {raw[:1000]}"
 
-            # Prepare links for each tag (distribute scores across tags)
-            for article in ranked_articles:
-                for tag in tags:
-                    links.append([
-                        article['source_link_id'],
-                        user_id,
-                        tag['tag_id'],
-                        article['score']
-                    ])
+                # Encode article
+                article_embedding = self.model.encode(article_text, convert_to_tensor=True)
+
+                # Check each tag against this article
+                matching_tags = []
+                total_similarity = 0
+
+                for tag_id, tag_data in tag_embeddings.items():
+                    similarity = util.cos_sim(tag_data['embedding'], article_embedding).item()
+
+                    if similarity >= SIMILARITY_THRESHOLD:
+                        matching_tags.append({
+                            'tag_id': tag_id,
+                            'similarity': similarity
+                        })
+                        total_similarity += similarity
+
+                # Only include if at least one tag matches
+                if matching_tags:
+                    # Base score: number of matching tags (1-5 points per tag)
+                    # Bonus: similarity strength
+                    num_tags = len(matching_tags)
+
+                    for match in matching_tags:
+                        # Score = base points for match + bonus for number of tags + similarity bonus
+                        # More tags matched = higher score for each
+                        score = int(1 + (num_tags * 2) + (match['similarity'] * 5))
+                        score = min(score, 10)  # Cap at 10
+
+                        links.append([
+                            article['source_link_id'],
+                            user_id,
+                            match['tag_id'],
+                            score
+                        ])
 
         self.clearRank(cursor)
         if links:
@@ -107,34 +146,6 @@ class MLRanker:
         """
         cursor.execute(sql, src_ids)
         return cursor.fetchall()
-
-    def rankArticles(self, interest_text, articles):
-        # Encode user interests
-        interest_embedding = self.model.encode(interest_text, convert_to_tensor=True)
-
-        ranked = []
-        for article in articles:
-            # Combine title (weighted more) and content
-            title = article['source_title'] or ''
-            raw = article['source_raw'] or ''
-
-            # Title is more important, so we weight it
-            article_text = f"{title} {title} {raw[:500]}"  # Repeat title, limit raw content
-
-            # Encode and compute similarity
-            article_embedding = self.model.encode(article_text, convert_to_tensor=True)
-            similarity = util.cos_sim(interest_embedding, article_embedding).item()
-
-            # Convert similarity (-1 to 1) to score (0 to 10)
-            score = max(0, int((similarity + 1) * 5))
-
-            if score > 0:
-                ranked.append({
-                    'source_link_id': article['source_link_id'],
-                    'score': score
-                })
-
-        return ranked
 
     def clearRank(self, cursor):
         cursor.execute('TRUNCATE news_summary')
