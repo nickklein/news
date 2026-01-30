@@ -1,10 +1,11 @@
 #!/usr/bin/python3
 import pymysql.cursors
 from bs4 import BeautifulSoup
-from newspaper import Article
+from newspaper import Article, Config
 import requests
 import os
 import time
+import random
 import arrow
 from datetime import datetime
 import re
@@ -14,7 +15,7 @@ from dotenv import load_dotenv
 
 #load env file
 
-if (False):
+if (True):
 	path = '/var/www/vhosts/nickklein.ca/subdomains/life.nickklein.ca/.env'
 else:
 	path = '/home/ada/Sites/lifeautomation/core/.env'
@@ -54,8 +55,8 @@ class Crawler:
 			connection.close()
 
 	def collectLinks(self, cursor):
-		# Fetch Sources from DB
-		sql = 'SELECT source_id, source_domain, source_main_url FROM sources';
+		# Fetch Sources from DB that are linked to users
+		sql = 'SELECT DISTINCT sources.source_id, sources.source_domain, sources.source_main_url FROM sources INNER JOIN user_sources ON user_sources.source_id=sources.source_id';
 		cursor.execute(sql)
 		items = cursor.fetchall()
 		for item in items:
@@ -86,10 +87,13 @@ class Crawler:
 
 		cursor.execute(sql)
 		items = cursor.fetchall()
+		config = Config()
+		config.browser_user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+
 		for item in items:
 			print('Crawled: %s' % (item['source_link']))
 
-			article = Article(item['source_link'], language=item['language'])
+			article = Article(item['source_link'], language=item['language'], config=config)
 
 			try:
 				article.download()
@@ -107,11 +111,11 @@ class Crawler:
 				update = 'UPDATE source_links SET active = -1, updated_at=now() WHERE source_link_id = %s'
 				cursor.execute(update, (item['source_link_id']))
 
-			time.sleep(1)  # Throttle by sleeping for 2 seconds between requests
+			time.sleep(random.uniform(1, 5))  # Throttle by sleeping 1-5 seconds between requests
 
 	def fetchAndParseWebsite(self, link_url):
 		try:
-			headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+			headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
 			story = requests.get(url=link_url, headers=headers)
 			return BeautifulSoup(story.content, 'html.parser')
 		except KeyError:
