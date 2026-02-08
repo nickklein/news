@@ -10,7 +10,7 @@ load_dotenv(path)
 
 OLLAMA_ENDPOINT = os.environ.get("OLLAMA_ENDPOINT", "http://100.117.210.97:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:latest")
-BATCH_SIZE = 15  # Articles per Ollama request
+BATCH_SIZE = 8  # Articles per Ollama request
 
 
 class MLRanker:
@@ -152,7 +152,7 @@ JSON response:"""
                     "stream": False,
                     "options": {
                         "temperature": 0.1,
-                        "num_predict": 2000
+                        "num_predict": 4000
                     }
                 },
                 timeout=120
