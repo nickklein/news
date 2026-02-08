@@ -1,14 +1,17 @@
 #!/usr/bin/python3
 import pymysql.cursors
 import os
+import json
+import requests
 from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer, util
 
 path = '/app/.env'
 load_dotenv(path)
 
-# Minimum similarity to consider a tag as "present" in an article
-SIMILARITY_THRESHOLD = 0.35
+OLLAMA_ENDPOINT = os.environ.get("OLLAMA_ENDPOINT", "http://100.117.210.97:11434")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:latest")
+BATCH_SIZE = 15  # Articles per Ollama request
+
 
 class MLRanker:
 
@@ -20,9 +23,6 @@ class MLRanker:
     MYSQL_CHARSET = 'utf8'
 
     def __init__(self):
-        # Load the sentence transformer model
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
-
         connection = pymysql.connect(
             host=self.MYSQL_HOST,
             port=int(self.MYSQL_PORT),
@@ -66,6 +66,9 @@ class MLRanker:
             })
 
         for user_id, tags in user_tags_map.items():
+            tag_names = [t['tag_name'] for t in tags]
+            tag_ids = {t['tag_name'].lower(): t['tag_id'] for t in tags}
+
             # Get user's source IDs
             src_ids = self.getSourceIds(cursor, user_id)
             if not src_ids:
@@ -76,59 +79,125 @@ class MLRanker:
             if not articles:
                 continue
 
-            # Pre-encode all tag names
-            tag_embeddings = {}
-            for tag in tags:
-                tag_embeddings[tag['tag_id']] = {
-                    'name': tag['tag_name'],
-                    'embedding': self.model.encode(tag['tag_name'], convert_to_tensor=True)
-                }
+            print(f"Processing {len(articles)} articles for user {user_id} with tags: {tag_names}")
 
-            # Process each article
-            for article in articles:
-                title = article['source_title'] or ''
-                raw = article['source_raw'] or ''
-                article_text = f"{title} {raw[:1000]}"
+            # Process in batches
+            for i in range(0, len(articles), BATCH_SIZE):
+                batch = articles[i:i + BATCH_SIZE]
+                rankings = self.rank_with_ollama(batch, tag_names)
 
-                # Encode article
-                article_embedding = self.model.encode(article_text, convert_to_tensor=True)
+                for article_id, result in rankings.items():
+                    score = result.get('score', 0)
+                    matched_tags = result.get('tags', [])
 
-                # Check each tag against this article
-                matching_tags = []
-                total_similarity = 0
-
-                for tag_id, tag_data in tag_embeddings.items():
-                    similarity = util.cos_sim(tag_data['embedding'], article_embedding).item()
-
-                    if similarity >= SIMILARITY_THRESHOLD:
-                        matching_tags.append({
-                            'tag_id': tag_id,
-                            'similarity': similarity
-                        })
-                        total_similarity += similarity
-
-                # Only include if at least one tag matches
-                if matching_tags:
-                    # Base score: number of matching tags (1-5 points per tag)
-                    # Bonus: similarity strength
-                    num_tags = len(matching_tags)
-
-                    for match in matching_tags:
-                        # Score = base points for match + bonus for number of tags + similarity bonus
-                        # More tags matched = higher score for each
-                        score = int(1 + (num_tags * 2) + (match['similarity'] * 5))
-                        score = min(score, 10)  # Cap at 10
-
-                        links.append([
-                            article['source_link_id'],
-                            user_id,
-                            match['tag_id'],
-                            score
-                        ])
+                    if score > 0 and matched_tags:
+                        for tag_name in matched_tags:
+                            tag_id = tag_ids.get(tag_name.lower())
+                            if tag_id:
+                                links.append([
+                                    int(article_id),
+                                    user_id,
+                                    tag_id,
+                                    min(score, 10)
+                                ])
 
         self.clearRank(cursor)
         if links:
             cursor.executemany(summary_sql, links)
+            print(f"Inserted {len(links)} ranked articles")
+
+    def rank_with_ollama(self, articles, tags):
+        """Send batch of articles to Ollama for ranking"""
+
+        # Build article list for prompt
+        article_list = []
+        for art in articles:
+            title = art['source_title'] or 'Untitled'
+            # Truncate raw content to first 500 chars for context
+            raw = (art['source_raw'] or '')[:500]
+            article_list.append({
+                'id': art['source_link_id'],
+                'title': title,
+                'snippet': raw
+            })
+
+        prompt = f"""You are a news relevance ranker. Given a user's interests (tags) and a list of articles, score each article's relevance.
+
+User's interests/tags: {', '.join(tags)}
+
+Articles to rank:
+{json.dumps(article_list, indent=2)}
+
+For each article, respond with a JSON object mapping article ID to its ranking:
+{{
+  "article_id": {{"score": 1-10, "tags": ["matching", "tags"]}},
+  ...
+}}
+
+Rules:
+- Score 1-10 where 10 is highly relevant to the user's interests
+- Only include articles with score >= 3
+- "tags" should list which of the user's tags this article relates to
+- Consider semantic relevance, not just keyword matching
+- Respond ONLY with valid JSON, no explanation
+
+JSON response:"""
+
+        try:
+            response = requests.post(
+                f"{OLLAMA_ENDPOINT}/api/generate",
+                json={
+                    "model": OLLAMA_MODEL,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.1,
+                        "num_predict": 2000
+                    }
+                },
+                timeout=120
+            )
+            response.raise_for_status()
+
+            result = response.json()
+            text = result.get('response', '')
+
+            # Extract JSON from response
+            return self.parse_ranking_response(text)
+
+        except requests.exceptions.RequestException as e:
+            print(f"Ollama request failed: {e}")
+            return {}
+        except Exception as e:
+            print(f"Error ranking batch: {e}")
+            return {}
+
+    def parse_ranking_response(self, text):
+        """Parse Ollama's JSON response into rankings dict"""
+        try:
+            # Try to find JSON in the response
+            text = text.strip()
+
+            # Handle thinking tags from qwen3
+            if '</think>' in text:
+                text = text.split('</think>')[-1].strip()
+
+            # Find JSON object
+            start = text.find('{')
+            end = text.rfind('}') + 1
+
+            if start >= 0 and end > start:
+                json_str = text[start:end]
+                rankings = json.loads(json_str)
+
+                # Normalize keys to strings
+                return {str(k): v for k, v in rankings.items()}
+
+            return {}
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse Ollama response: {e}")
+            print(f"Response was: {text[:500]}")
+            return {}
 
     def getSourceIds(self, cursor, user_id):
         cursor.execute('SELECT source_id FROM user_sources WHERE user_id = %s', (user_id,))
